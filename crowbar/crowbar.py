@@ -359,8 +359,12 @@ class crowbar:
         #~ add a search comboboxentry1 and 3 buttons
         self.liststore1 = gtk.ListStore(str)
         self.comboboxentry1 = gtk.ComboBoxEntry(self.liststore1, 0)
-        rows = ['#teamfollowback','#tfb','#f4f']
-        for row in rows:
+        popular = ['#teamfollowback','#tfb','#f4f']
+        trending=api.GetTrendsCurrent()        
+        trends = [x.name for x in trending]
+        for row in popular:
+            self.liststore1.append([row])
+        for row in trends:
             self.liststore1.append([row])
         self.button3 = gtk.Button()
         self.button3.set_label('search')
@@ -448,6 +452,14 @@ class crowbar:
         self.update_followers_count()
         
     def refresh_clicked(self,widget,method = None):
+        self.liststore1.clear()
+        popular = ['#teamfollowback','#tfb','#f4f']
+        trending=api.GetTrendsCurrent()        
+        trends = [x.name for x in trending]
+        for row in popular:
+            self.liststore1.append([row])
+        for row in trends:
+            self.liststore1.append([row])
         self.last_action(None,self.last_method)
 
     def get_friendIDs(self):
