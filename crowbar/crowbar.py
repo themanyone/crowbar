@@ -414,7 +414,7 @@ class crowbar:
 
     def update_search(self,text):
         l = self.get_list(self.liststore1)
-        if text not in l:
+        if text and (text not in l):
             self.liststore1.append([text])
 
     def search_clicked(self,widget,method = None):
