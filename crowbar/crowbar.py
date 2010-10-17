@@ -62,7 +62,7 @@ class crowbar:
         names = os.listdir(cachedir)
         names = [a[:-5] for a in names if a[-5:]=='.auth']
         me = dialog.select('Twitter username?','Login:',None,names)  
-        return me
+        return me.strip()
     
     def authorize(self):
         """Twitter authorization
@@ -106,7 +106,7 @@ class crowbar:
         oauth_verifier = dialog.getText('What is the pin?',gtk.MESSAGE_QUESTION,'pin:',
         'Fill out the form in the web page that pops up.\n'
         'You will be given a PIN number.\n'
-        'Come back and enter that number here.')
+        'Come back and enter that number here.').strip()
 
         # Step 3: Once the consumer has redirected the user back to the oauth_callback
         # URL you can request the access token the user has approved. You use the 
