@@ -45,7 +45,7 @@ patch -p0 < ../python-twitter-retweet-3.1.patch
 
 import gtk
 import re,string,twitter,htmllib,webbrowser
-from twitter import os,urllib,oauth,urlparse
+from twitter import os,urllib,oauth,urlparse,TwitterError
 
 #~ ❤ local imports ❤ 
 import dialog
@@ -497,16 +497,36 @@ class crowbar:
         for x in text.split('@')[1:]:
             if x not in fol:
                 fol.append(x)
-        #~ friend everybody in list
+        # load nofollow list if it exists
+        me = self.me.screen_name
+        foes = []
+        cachedir = self.get_cachedir()
+        nofollow = cachedir+me+'.nofollow'
+        if os.path.exists(nofollow):
+            with open(nofollow) as f:
+                foes = [x.strip() for x in f.readlines()]
+        foeslen=len(foes)
+        #~ friend everybody in list unless friend or foe
         for a in fol:
-            if x not in friends:
+            if (x not in friends) and (x not in foes):
                 try:
                     api.CreateFriendship(a)
                     print 'followed', a
-                except:
-                    print 'can not follow',a
-                #~ only attempt to follow once
-                friends.append(a)
+                    friends.append(a)
+                except TwitterError as err:
+                    print('%s: %s' % (a,err))
+                    if not 'follow-limits' in str(err):
+                        foes.append(a)
+                    else:
+                        dialog.alert("You have reached Twitter's follow limit!")
+                        break
+        
+        #~ write more foes to disk
+        #~ these could be invalid names or blocked accounts
+        #~ we don't care. we just don't want to keep following
+        if foeslen < len(foes):
+            with open(nofollow,'a') as f:
+                f.writelines([x+'\n' for x in foes[foeslen:]])
         
     def follow_followers(self,widget,data = None):
         """follow followers by id not by name"""
@@ -534,23 +554,35 @@ class crowbar:
         todo: add safelist"""
         if not self.get_friendIDs():
             return
-        unsub = []
-        #~ safety feature in case twitter f's up
-        if len(followerIDs) < 1000:
-            print 'not enough followers'
+        me = self.me.screen_name
+        
+        # load safelist
+        cachedir = self.get_cachedir()
+        safefile = cachedir+me+'.safe'
+        safe = []; unsub = []
+        if os.path.exists(safefile):
+            with open(safefile) as f:
+                safe = [x.strip() for x in f.readlines()]
+        
+        #~ safety feature in case twitter f*s up
+        if len(followerIDs) < 100:
+            print 'Need at least 100 followers to use this feature.'
             return
         for a in friendIDs:
-            if a not in followerIDs:
+            if (a not in followerIDs) and (a not in safe):
                 unsub.append(a)
-        #~ print unsub
         unsub.remove(self.me.id)
+        #~ save unsub to nofollow list so we do not re-follow again
+        #~ (unless they follow us, of course)
+        nofollow = cachedir+me+'.nofollow'
+        with open(nofollow,'a') as f:
+            f.writelines([x+'\n' for x in unsub])
         if dialog.ok('Unfriend all '+str(len(unsub))+' non-followers?\n'
             'Abusing this may violate TOS.'):
             #UNSUB EVERYBODY IN unsub
             for a in unsub:
                 try:
                     api.DestroyFriendship(a)
-                    # leave on internal friends list so we don't re-follow
                     print 'unfriended',a
                 except:
                     pass
