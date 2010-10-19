@@ -58,8 +58,8 @@ class crowbar:
         cachedir = self.get_cachedir()
         names = os.listdir(cachedir)
         names = [a[:-5] for a in names if a[-5:]=='.auth']
-        me = dialog.select('Twitter username?','Login:',None,names)  
-        return me.strip()
+        self.myname = dialog.select('Twitter username?','Login:',None,names)
+        return self.myname.strip()
     
     def authorize(self):
         """Twitter authorization
@@ -125,7 +125,7 @@ class crowbar:
     
     def update_followers_count(self):
         """Updates the count of followers"""
-        self.me = api.GetUserTimeline(count = 1,include_rts = True)[0].user
+        self.me = api.GetUser(self.myname)
         fo=str(self.me.followers_count)
         fr=str(self.me.friends_count)
         self.window2.set_title(fr+" friends "+fo+" followers")
@@ -184,7 +184,7 @@ class crowbar:
         """follow a url or reply link"""
         url = url.replace('%26','&')
         url = url.replace('&amp;','&')
-        print("url-clicked", url, type_)
+        print("url-clicked %s" % url)
         if 'http://' not in url:
             if '@' in url:
                 self.entry1.set_text(url)
@@ -196,8 +196,7 @@ class crowbar:
             elif '☞' in url:
                 api.PostRetweet(int(str(url).replace('☞','')))
         else:
-            #~ print('launching browser')
-            os.system('htmlview "'+url+'"')
+            webbrowser.open(url)
     
     def post_update(self,widget,data = None):
         if data():
@@ -215,9 +214,8 @@ class crowbar:
                 ext = '.jpg'
             fname = str(fname)+ext
             cachefile = cachedir+fname
-            #~ print(url, cachefile)
             if os.path.exists(cachefile):
-                #~ print('cache hit: '+cachefile)
+                #~ cache hit
                 pb = gtk.gdk.pixbuf_new_from_file(cachefile)
                 pbs = pb.scale_simple(48,48,0)
                 return gtk.image_new_from_pixbuf(pbs)
@@ -235,7 +233,7 @@ class crowbar:
                         pbl.close()
                     except:
                         pass
-                    print('could not scale image for', fname)
+                    print('could not scale image for %s '% fname)
                     return gtk.image_new_from_file('blank.jpg')
                     #~ pbs = pb
                 #~ create image from pixbuf
@@ -249,14 +247,14 @@ class crowbar:
                 try:
                     pbl.close()
                 except:
-                    print(url,'truncated or incomplete.')
+                    print('%s truncated or incomplete.' % url)
             else:
                 #~ todo: make this a broken image
-                print('broken image for',fname)
+                print('broken image for %s'%fname)
                 image = gtk.image_new_from_file('blank.jpg')
             fp.close()
         else:
-            print('no url for image',fname)
+            print('no url for image%'%fname)
             image = gtk.image_new_from_file('blank.jpg')
         return image
         
@@ -293,7 +291,7 @@ class crowbar:
         return s
 
     def html_view(self,s):
-        """show timeline or search data in htmlview"""
+        """show search results and timelines in htmlview"""
         # clear, add viewport & scrolling table
         if self.sw1.get_child() is self.html:
             self.sw1.remove(self.html)
@@ -325,14 +323,14 @@ class crowbar:
                 reply+=' @'+string.join(self.getshouts(t),' @')
             self.pic.append(self.image_from_url(img,usn))
             text = self.process_urls(str(x.text))
-            #~ \w=\$\?\-\.\+\!\*\'\(\)/
+            #~ (re)construct html message
             self.msg.append(HtmlTextView())
             self.msg[rows].connect("url-clicked",self.link_clicked)
-            h = '<span style="background-color:black">' +'<a href="'+star+str(x.id)+'">'+star +'</a><span style="font-weight: bold">'+'<a href="http://twitter.com/'+usn+'">' +usn+'</a></span>: '+ text +'<br /><span style="font-size:small">' +x.relative_created_at+' via '+self.unescape(x.source)+' | <a href="@'+reply+'">reply</a> | <a href="☞' +str(x.id)+'">retweet</a></span></span>'
+            h = '<span style="background-color:black">' +'<a title="Favorite" href="'+star+str(x.id)+'">'+star +'</a><span style="font-weight: bold">'+'<a href="http://twitter.com/'+usn+'">' +usn+'</a></span>: '+ text +'<br /><span style="font-size:small">' +x.relative_created_at+' via '+self.unescape(x.source)+' | <a href="@'+reply+'">reply</a> | <a href="☞' +str(x.id)+'">retweet</a></span></span>'
             try:
                 self.msg[rows].display_html(str(h))
             except:
-                print('Error displaying',type(h))
+                print('Error displaying:')
                 print(h+'\n')
             self.table1.attach(self.pic[rows],0,1,rows,rows+1)
             self.table1.attach(self.msg[rows],1,2,rows,rows+1)
@@ -476,16 +474,8 @@ class crowbar:
 
     def follow_clicked(self,widget,data = None):
         """follow all poeple in textview1 by name"""
-        if self.warn and (not dialog.ok("Are you sure?\n"
-            "Following too many people may violate TOS.")):
-            return
-        else:
-            self.warn=False
-        global friends
-        if not self.get_friendIDs():
-            return
-        buf = self.textview1.get_buffer()
         #~ iterate through the text buffer
+        buf = self.textview1.get_buffer()
         (iter_first, iter_last) = buf.get_bounds()
         text = buf.get_text(iter_first, iter_last)
         #~ remove spaces and build a list to follow
@@ -494,36 +484,39 @@ class crowbar:
         for x in text.split('@')[1:]:
             if x not in fol:
                 fol.append(x)
+        if self.warn and (not dialog.ok("Follow %s people.\n"
+            "Are you sure?" % len(fol))):
+            return
+        else:
+            self.warn=False
         # load nofollow list if it exists
         me = self.me.screen_name
-        foes = []
+        nofol = []
         cachedir = self.get_cachedir()
         nofollow = cachedir+me+'.nofollow'
         if os.path.exists(nofollow):
             with open(nofollow) as f:
-                foes = [x.strip() for x in f.readlines()]
-        foeslen=len(foes)
-        #~ friend everybody in list unless friend or foe
+                nofol = [x.strip() for x in f.readlines()]
+        nofollen=len(nofol)
+        #~ friend everybody in list unless nofol
         for a in fol:
-            if (x not in friends) and (x not in foes):
+            if a not in nofol:
                 try:
                     api.CreateFriendship(a)
-                    print('followed', a)
-                    friends.append(a)
+                    print('followed %s' % a)
                 except TwitterError as err:
-                    print('%s: %s' % (a,err))
-                    if not 'follow-limits' in str(err):
-                        foes.append(a)
-                    else:
+                    print(err)
+                    if 'follow-limits' in str(err):
                         dialog.alert("You have reached Twitter's follow limit!")
                         break
+                nofol.append(a)
         
-        #~ write more foes to disk
-        #~ these could be invalid names or blocked accounts
-        #~ we don't care. we just don't want to keep following
-        if foeslen < len(foes):
+        #~ Write nofollows to disk. These could be invalid names,
+        #~ existing friends, or blocked accounts
+        #~ we don't care. We just don't want to keep following.
+        if nofollen < len(nofol):
             with open(nofollow,'a') as f:
-                f.writelines([x+'\n' for x in foes[foeslen:]])
+                f.writelines([x+'\n' for x in nofol[nofollen:]])
         
     def follow_followers(self,widget,data = None):
         """follow followers by id not by name"""
@@ -548,9 +541,9 @@ class crowbar:
                 try:
                     ret = api.CreateFriendship(a)
                     friendIDs.append(a)
-                    print('followed',ret.screen_name)
+                    print('followed %s' % ret.screen_name)
                 except TwitterError as err:
-                    print('%s: %s' % (a,err))
+                    print(err)
                     if not 'follow-limits' in str(err):
                         newprot.append(a)
                     else:
@@ -592,10 +585,10 @@ class crowbar:
             for a in unsub:
                 try:
                     u=api.DestroyFriendship(a)
-                    print('unfriended',a)
+                    print('unfriended %s' % a)
                     unsub_names.append(u.screen_name)
                 except TwitterError as err:
-                    print('%s: %s' % (a,err))
+                    print(err)
         nofollow = cachedir+me+'.nofollow'
         with open(nofollow,'a') as f:
             f.writelines([x+'\n' for x in unsub_names])

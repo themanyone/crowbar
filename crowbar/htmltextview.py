@@ -60,11 +60,13 @@ class HtmlHandler(xml.sax.handler.ContentHandler):
         xml.sax.handler.ContentHandler.__init__(self)
         self.textbuf = textview.get_buffer()
         self.textview = textview
+        #~ self.textview.connect('motion-notify-event',self._tooltip_event,'a',self.textview,'asdf',None)
         self.iter = startiter
         self.text = ''
         self.styles = [] # a gtk.TextTag or None, for each span level
         self.list_counters = [] # stack (top at head) of list
                                 # counters, or None for unordered list
+        self.tooltips = gtk.Tooltips()
 
     def _parse_style_color(self, tag, value):
         color = _parse_css_color(value)
@@ -329,6 +331,11 @@ class HtmlHandler(xml.sax.handler.ContentHandler):
             self.textview.emit("url-clicked", href, type_)
             return True
         return False
+
+    def _tooltip_event(self, tag, textview, event, iter, text, type_):
+        #~ if event.type == gtk.gdk.MOTION_NOTIFY:
+        self.tooltips.set_tip(self.textview, text)
+        return False
         
     def characters(self, content):
         if allwhitespace_rx.match(content) is not None:
@@ -349,11 +356,22 @@ class HtmlHandler(xml.sax.handler.ContentHandler):
             tag = self.textbuf.create_tag()
             tag.set_property('foreground', '#0000ff')
             tag.set_property('underline', pango.UNDERLINE_SINGLE)
-            try:
+            if 'type' in attrs.keys():
                 type_ = attrs['type']
-            except KeyError:
+            else:
                 type_ = None
+            if 'title' in attrs.keys():
+                title_= attrs['title']
+            elif 'alt' in attrs.keys():
+                title_= attrs['alt']
+            else:
+                if 'href' in attrs.keys():
+                    title_=attrs['href']
+                else:
+                    title_= None
             tag.connect('event', self._anchor_event, attrs['href'], type_)
+            tag.connect('event', self._tooltip_event, title_, type_)
+            print attrs.items()
             tag.is_anchor = True
         
         self._begin_span(style, tag)
@@ -465,6 +483,7 @@ class HtmlTextView(gtk.TextView):
         self.connect("enter-notify-event", self.__motion_notify_event)
         self.set_pixels_above_lines(3)
         self.set_pixels_below_lines(3)
+        #~ self.tooltips = gtk.Tooltips()
 
     def __leave_event(self, widget, event):
         if self._changed_cursor:
@@ -490,6 +509,7 @@ class HtmlTextView(gtk.TextView):
             window = widget.get_window(gtk.TEXT_WINDOW_TEXT)
             window.set_cursor(gtk.gdk.Cursor(gtk.gdk.XTERM))
             self._changed_cursor = False
+            #~ widget.tooltips.set_tip(widget, None)
         return False
 
     def display_html(self, html):
@@ -539,7 +559,7 @@ if __name__ == '__main__':
     htmlview.display_html("<br/>")
     htmlview.display_html("""
     <body xmlns='http://www.w3.org/1999/xhtml'>
-      <p style='text-align:center'>Hey, are you licensed to <a href='http://www.jabber.org/'>Jabber</a>?</p>
+      <p style='text-align:center'>Hey, are you licensed to <a href='http://www.jabber.org/' alt='jabber'>Jabber</a>?</p>
       <p style='text-align:right'><img src='http://www.jabber.org/images/psa-license.jpg'
               alt='A License to Jabber'
               height='261'
@@ -566,7 +586,7 @@ if __name__ == '__main__':
     </body>
         """)
 
-    htmlview.display_html('<body><span style="font-family: monospace">|&#xA0;&#xA0;&#xA0;|</span></body>')
+    htmlview.display_html('<body><span style="font-family: monospace">|&#xA0;&#xA0;&#xA0;|<a alt="My site" href="http://eq2.us">eq2.us</a><a title="My site" href="http://eq2.us">eq2.us</a></span></body>')
 
     htmlview.show()
     sw = gtk.ScrolledWindow()
