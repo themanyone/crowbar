@@ -17,31 +17,29 @@
 ### 
 ### You should have received a copy of the GNU General Public License
 ### along with this program.  If not, see http://www.gnu.org/licenses.
-"""
-A social networking application for viewing and
-posting status updates to Twitter.
+''' A social networking application
+    for viewing and posting status updates to Twitter.
 
-Dependends on:
-http://code.google.com/p/python-twitter/
+    Dependends on:
+        http://code.google.com/p/python-twitter/
 
-Which also depends on:
-    http://cheeseshop.python.org/pypi/simplejson
-    http://github.com/simplegeo/python-oauth2 
-    http://code.google.com/p/httplib2/ 
+    python-twitter depends on:
+        http://cheeseshop.python.org/pypi/simplejson
+        http://github.com/simplegeo/python-oauth2 
+        http://code.google.com/p/httplib2/ 
 
-1) Install latest python-twitter from hg:
-hg clone https://python-twitter.googlecode.com/hg/ python-twitter
+    1) Install latest python-twitter from hg:
+    hg clone https://python-twitter.googlecode.com/hg/ python-twitter
 
-2) Download retweet patch from:
+    2) Download retweet patch from:
 
-http://code.google.com/p/python-twitter/issues/detail?can=2&q=&colspec=ID%20Type%20Status%20Priority%20Milestone%20Owner%20Summary&sort=&id=130
+    http://code.google.com/p/python-twitter/issues/detail?can=2&q=&colspec=ID%20Type%20Status%20Priority%20Milestone%20Owner%20Summary&sort=&id=130
 
-3) Patch
+    3) Patch
 
-cd python-twitter
+    cd python-twitter
 
-patch -p0 < ../python-twitter-retweet-3.1.patch
-"""
+    patch -p0 < ../python-twitter-retweet-3.1.patch'''
 
 import gtk
 import re,string,twitter,htmllib,webbrowser
@@ -53,8 +51,7 @@ import dialog
 from htmltextview import HtmlTextView
 
 class crowbar:
-    """
-    Class for viewing and posting Twitter status updates.
+    """Class for viewing and posting status updates.
     """
     def get_username(self):
         """Get the user login name"""
@@ -542,8 +539,13 @@ class crowbar:
                 try:
                     ret = api.CreateFriendship(a)
                     print 'followed',a
-                except:
-                    print 'could not follow',a
+                except TwitterError as err:
+                    print('%s: %s' % (a,err))
+                    if not 'follow-limits' in str(err):
+                        pass
+                    else:
+                        dialog.alert("You have reached Twitter's follow limit!")
+                        break
                 #~ add to internal friends list anyway
                 #~ so we don't keep trying to follow them
                 friendIDs.append(a)
@@ -566,26 +568,29 @@ class crowbar:
         
         #~ safety feature in case twitter f*s up
         if len(followerIDs) < 100:
-            print 'Need at least 100 followers to use this feature.'
+            print('Need at least 100 followers to use this feature.')
             return
         for a in friendIDs:
             if (a not in followerIDs) and (a not in safe):
                 unsub.append(a)
-        unsub.remove(self.me.id)
+        #~ unsub.remove(self.me.id)
         #~ save unsub to nofollow list so we do not re-follow again
         #~ (unless they follow us, of course)
-        nofollow = cachedir+me+'.nofollow'
-        with open(nofollow,'a') as f:
-            f.writelines([x+'\n' for x in unsub])
+        unsub_names=[]
         if dialog.ok('Unfriend all '+str(len(unsub))+' non-followers?\n'
             'Abusing this may violate TOS.'):
             #UNSUB EVERYBODY IN unsub
             for a in unsub:
                 try:
-                    api.DestroyFriendship(a)
+                    u=api.DestroyFriendship(a)
                     print 'unfriended',a
+                    unsub_names.append(u.screen_name)
                 except:
                     pass
+        nofollow = cachedir+me+'.nofollow'
+        with open(nofollow,'a') as f:
+            f.writelines([x+'\n' for x in unsub_names])
+
 
     def __init__(self):
         """main initialization routine"""
