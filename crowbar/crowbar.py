@@ -481,9 +481,11 @@ class crowbar:
         #~ remove spaces and build a list to follow
         text = text.replace(' ','')
         fol = []
+        #~ create fol list
         for x in text.split('@')[1:]:
             if x not in fol:
                 fol.append(x)
+        #~ ask
         if self.warn and (not dialog.ok("Follow %s people.\n"
             "Are you sure?" % len(fol))):
             return
@@ -498,7 +500,7 @@ class crowbar:
             with open(nofollow) as f:
                 nofol = [x.strip() for x in f.readlines()]
         nofollen=len(nofol)
-        #~ friend everybody in list unless nofol
+        #~ friend everybody unless nofol, add to nofol
         for a in fol:
             if a not in nofol:
                 try:
@@ -511,9 +513,9 @@ class crowbar:
                         break
                 nofol.append(a)
         
-        #~ Write nofollows to disk. These could be invalid names,
-        #~ existing friends, or blocked accounts
-        #~ we don't care. We just don't want to keep following.
+        #~ Write nofol to disk. These could be invalid names,
+        #~ existing friends, or blocked accounts.
+        #~ We don't care. We just don't follow them.
         if nofollen < len(nofol):
             with open(nofollow,'a') as f:
                 f.writelines([x+'\n' for x in nofol[nofollen:]])
@@ -535,7 +537,7 @@ class crowbar:
         if os.path.exists(protfile):
             with open(protfile) as f:
                 prot = [int(x.strip()) for x in f.readlines()]
-
+        #~ follow everyone in followerIDs
         for a in followerIDs:
             if (a not in friendIDs) and (a not in prot):
                 try:
@@ -549,7 +551,7 @@ class crowbar:
                     else:
                         dialog.alert("You have reached Twitter's follow limit!")
                         break
-        #~ append those we can not follow to protected / pending
+        #~ those we can not follow are probably protected
         with open(protfile,'a') as f:
             f.writelines([str(x)+'\n' for x in newprot])
 
@@ -577,7 +579,7 @@ class crowbar:
             if (a not in followerIDs) and (a not in safe):
                 unsub.append(a)
         #~ unsub.remove(self.me.id)
-        #~ save unsub to nofollow list so we do not re-follow again
+        #~ save nofollow list so we do not re-follow
         #~ (unless they follow us, of course)
         unsub_names=[]
         if dialog.ok('Unfriend all '+str(len(unsub))+' non-followers?'):

@@ -371,7 +371,7 @@ class HtmlHandler(xml.sax.handler.ContentHandler):
                     title_= None
             tag.connect('event', self._anchor_event, attrs['href'], type_)
             tag.connect('event', self._tooltip_event, title_, type_)
-            print attrs.items()
+            #~ print attrs.items()
             tag.is_anchor = True
         
         self._begin_span(style, tag)
