@@ -326,7 +326,7 @@ class crowbar:
             #~ (re)construct html message
             self.msg.append(HtmlTextView())
             self.msg[rows].connect("url-clicked",self.link_clicked)
-            h = '<span style="background-color:black">' +'<a title="Favorite" href="'+star+str(x.id)+'">'+star +'</a><span style="font-weight: bold">'+'<a href="http://twitter.com/'+usn+'">' +usn+'</a></span>: '+ text +'<br /><span style="font-size:small">' +x.relative_created_at+' via '+self.unescape(x.source)+' | <a href="@'+reply+'">reply</a> | <a href="☞' +str(x.id)+'">retweet</a></span></span>'
+            h = '<span><a title="Favorite" href="'+star+str(x.id)+'">'+star +'</a><span style="font-weight: bold">'+'<a href="http://twitter.com/'+usn+'">' +usn+'</a></span>: '+ text +'<br /><span style="font-size:small">' +x.relative_created_at+' via '+self.unescape(x.source)+' | <a href="@'+reply+'">reply</a> | <a href="☞' +str(x.id)+'">retweet</a></span></span>'
             try:
                 self.msg[rows].display_html(str(h))
             except:
