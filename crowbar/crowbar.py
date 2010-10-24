@@ -195,6 +195,10 @@ class crowbar:
                 api.CreateFavorite(api.GetStatus(int(str(url).replace('☆',''))))
             elif '☞' in url:
                 api.PostRetweet(int(str(url).replace('☞','')))
+            elif '☠' in url:
+                api.DestroyDirectMessage(int(str(url).replace('☠','')))
+            elif '✗' in url:
+                api.DestroyStatus(int(str(url).replace('✗','')))
         else:
             webbrowser.open(url)
     
@@ -290,7 +294,7 @@ class crowbar:
                 (m.group(1),'#'+m.group(2),m.group(2)),s)
         return s
 
-    def html_view(self,s):
+    def html_view(self,s,dm=False):
         """show search results and timelines in htmlview"""
         # clear, add viewport & scrolling table
         if self.sw1.get_child() is self.html:
@@ -310,15 +314,20 @@ class crowbar:
         rows = 0
         #display each user pic and instant message
         for x in s:
-            user = x.GetUser()
+            if not dm:
+                user = x.GetUser()
+            else:
+                user = api.GetUser(x.sender_screen_name)
+                
             img = user.GetProfileImageUrl()
             usn = str(user.GetScreenName())
             t[0] = x
             reply = usn
             shouts = self.getshouts(t)
             star = '☆'
-            if x.favorited:
-                star = '★'
+            if not dm:
+                if x.favorited:
+                    star = '★'
             if shouts:
                 reply+=' @'+string.join(self.getshouts(t),' @')
             self.pic.append(self.image_from_url(img,usn))
@@ -326,7 +335,19 @@ class crowbar:
             #~ (re)construct html message
             self.msg.append(HtmlTextView())
             self.msg[rows].connect("url-clicked",self.link_clicked)
-            h = '<span><a title="Favorite" href="'+star+str(x.id)+'">'+star +'</a><span style="font-weight: bold">'+'<a href="http://twitter.com/'+usn+'">' +usn+'</a></span>: '+ text +'<br /><span style="font-size:small">' +x.relative_created_at+' via '+self.unescape(x.source)+' | <a href="@'+reply+'">reply</a> | <a href="☞' +str(x.id)+'">retweet</a></span></span>'
+            h = '<span>'
+            if not dm:
+                h+='<a title="Favorite" href="'+star+str(x.id)+'">'+star +'</a>'
+            h+='<span style="font-weight: bold">'+'<a href="http://twitter.com/'+usn+'">' +usn+'</a></span>: '+ text + '<br /><span style="font-size:small">'
+            if not dm:
+                h+=x.relative_created_at+' via '+self.unescape(x.source)+' | '
+            if dm:
+                h+='<a href="@'+reply+'">reply</a> | <a href="☠'+str(x.id)+'" title="Delete this.">Delete</a>'
+            elif (usn==self.me.screen_name):
+                h+='<a href="✗'+str(x.id)+'" title="Delete this tweet.">Delete</a>'
+            else:
+                h+='<a href="@'+reply+'">reply</a> | <a href="☞' +str(x.id)+'">retweet</a>'
+            h+='</span></span>'
             try:
                 self.msg[rows].display_html(str(h))
             except:
@@ -355,36 +376,48 @@ class crowbar:
         self.liststore1 = gtk.ListStore(str)
         self.comboboxentry1 = gtk.ComboBoxEntry(self.liststore1, 0)
         popular = ['#teamfollowback','#tfb','#f4f']
-        trending=api.GetTrendsCurrent()        
+        trending=api.GetTrendsCurrent()
         trends = [x.name for x in trending]
         for row in popular:
             self.liststore1.append([row])
         for row in trends:
             self.liststore1.append([row])
-        self.button3 = gtk.Button()
-        self.button3.set_label('search')
-        self.button3.set_property('width-request',55)
-        self.button3.connect('clicked',self.search_clicked,self.comboboxentry1.child.get_text)
-        self.button4 = gtk.Button()
-        self.button4.set_label('timeline')
-        self.button4.set_property('width-request',65)
-        self.button4.connect('clicked',self.timeline_clicked,self.comboboxentry1.child.get_text)  
-        self.button5 = gtk.Button()
-        self.button5.set_label('mentions')
-        self.button5.set_property('width-request',65)
-        self.button5.connect('clicked',self.mentions_clicked,self.comboboxentry1.child.get_text)
-
+            
+        # insert a horizontal box with combo and buttons
         self.hbox2 = gtk.HBox(homogeneous = False)
         self.hbox2.pack_start(self.comboboxentry1)
-        self.hbox2.pack_start(self.button3,expand = False,fill = True)
-        self.hbox2.pack_start(self.button4,expand = False,fill = True)
-        self.hbox2.pack_start(self.button5,expand = False,fill = True)
+        button = gtk.Button()
+        button.set_label('search')
+        button.set_property('width-request',55)
+        button.connect('clicked',self.search_clicked,self.comboboxentry1.child.get_text)
+        self.hbox2.pack_start(button,expand = False,fill = True)
+        button = gtk.Button()
+        button.set_label('friends')
+        button.set_property('width-request',55)
+        button.connect('clicked',self.timeline_clicked,self.comboboxentry1.child.get_text)  
+        self.hbox2.pack_start(button,expand = False,fill = True)
+        button = gtk.Button()
+        button.set_label('user')
+        button.set_property('width-request',40)
+        button.connect('clicked',self.user_timeline_clicked,self.comboboxentry1.child.get_text)  
+        self.hbox2.pack_start(button,expand = False,fill = True)
+        button = gtk.Button()
+        button.set_label('dm')
+        button.set_property('width-request',35)
+        button.connect('clicked',self.dm_clicked,self.comboboxentry1.child.get_text)  
+        self.hbox2.pack_start(button,expand = False,fill = True)
+        button = gtk.Button()
+        button.set_label('mention')
+        button.set_property('width-request',70)
+        button.connect('clicked',self.mentions_clicked,self.comboboxentry1.child.get_text)
+        self.hbox2.pack_start(button,expand = False,fill = True)
+
         #~ testify.test(self)
         self.vbox1.pack_start(self.hbox2,expand = False)
         self.html.show_all()
         self.hbox2.show_all()
         
-    def display_results(self,s,getnames):
+    def display_results(self,s,getnames,dm=False):
         """display results of searches and timelines"""
         lnames = ''
         if getnames:
@@ -394,7 +427,7 @@ class crowbar:
         self.textview1.set_wrap_mode(gtk.WRAP_WORD)
         buf = self.textview1.get_buffer()
         buf.set_text(lnames+"@"+string.join(shouts," @"))        
-        self.html_view(s)
+        self.html_view(s,dm)
         self.window2.show_all()
 
     def get_list(self,widget):
@@ -438,10 +471,29 @@ class crowbar:
         self.update_search(text)
         self.update_followers_count()
         
+    def user_timeline_clicked(self,widget,method = None):
+        """get user timeline"""
+        text = method()
+        getnames = False
+        s = api.GetUserTimeline(text)
+        self.display_results(s,getnames)
+        self.last_action = self.user_timeline_clicked
+        self.last_method = method
+        self.update_search(text)
+        self.update_followers_count()
+
     def mentions_clicked(self,widget,method = None):
         """get mentions"""
         s = api.GetMentions()
         self.display_results(s,True)
+        self.last_action = self.mentions_clicked
+        self.last_method = method
+        self.update_followers_count()
+        
+    def dm_clicked(self,widget,method = None):
+        """get mentions"""
+        s = api.GetDirectMessages()
+        self.display_results(s,False,True)
         self.last_action = self.mentions_clicked
         self.last_method = method
         self.update_followers_count()
