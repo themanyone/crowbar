@@ -18,6 +18,7 @@
 ### You should have received a copy of the GNU General Public License
 ### along with this program.  If not, see http://www.gnu.org/licenses.
 import sys,gtk,urllib
+import webbrowser
 from htmltextview import HtmlTextView
 
 class test:
@@ -29,15 +30,18 @@ class test:
     def __init__(self):
         w=gtk.Window()
         print (sys.getdefaultencoding())
-        msg1="""<span style="background-color:black">ω&RT</span>
+        msg1="""<span><p>This is a <a href="http://eq2.us">TEST</a>.</p>Enjoy.</span>
 
 """
         print type(msg1)
         htmlview = HtmlTextView()
         def url_cb(view, url, type_):
-            print ("url-clicked", url, type_))
+            print ("url-clicked", url, type_)
+            webbrowser.open(url)
         htmlview.connect("url-clicked", url_cb)
         w.connect("delete-event",self.window_close)
+        w.set_property('width-request',300)
+        w.set_property('height-request',200)
         htmlview.display_html(msg1)
         w.add(htmlview)
         w.show_all()
