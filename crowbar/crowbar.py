@@ -639,7 +639,7 @@ class crowbar:
             for a in unsub:
                 try:
                     u=api.DestroyFriendship(a)
-                    print('unfriended %s' % a)
+                    print('unfriended %s' % u.screen_name)
                     unsub_names.append(u.screen_name)
                 except TwitterError as err:
                     print(err)
