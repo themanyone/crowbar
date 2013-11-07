@@ -81,9 +81,9 @@ class crowbar:
                 access_token = twitter.simplejson.loads(data)
                 return access_token
 
-        request_token_url = 'http://twitter.com/oauth/request_token'
-        access_token_url = 'http://twitter.com/oauth/access_token'
-        authorize_url = 'http://twitter.com/oauth/authorize'
+        request_token_url = 'https://api.twitter.com/oauth/request_token'
+        access_token_url = 'https://api.twitter.com/oauth/access_token'
+        authorize_url = 'https://api.twitter.com/oauth/authorize'
         consumer = oauth.Consumer(self.consumer_key, self.consumer_secret)
         client = oauth.Client(consumer)
         # Step 1: Get a request token. This is a temporary token that is used for 
@@ -125,7 +125,7 @@ class crowbar:
     
     def update_followers_count(self):
         """Updates the count of followers"""
-        self.me = api.GetUser(self.myname)
+        self.me = api.GetUser(screen_name=self.myname)
         fo=str(self.me.followers_count)
         fr=str(self.me.friends_count)
         self.window2.set_title(fr+" friends "+fo+" followers")
@@ -464,7 +464,9 @@ class crowbar:
             if '#' in text:
                 getmames = False
                 text = None
-        s = api.GetFriendsTimeline(text)
+            s = api.GetUserTimeline(text)
+        else:
+            s = api.GetHomeTimeline()
         self.display_results(s,getnames)
         self.last_action = self.timeline_clicked
         self.last_method = method
