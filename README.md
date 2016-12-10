@@ -1,8 +1,8 @@
 # Crowbar
 
-Crowbar is a desktop social networking application for Twiter written using python-twitter and pyGTK.
+Crowbar is a desktop social networking application for Twiter written using python-twitter and pyGTK. It views and posts status updates to Twitter.
 
-It views and posts status updates to Twitter.
+Brought to you by [The Nerd Show](https://thenerdshow.com)
 
 Colors inherit desktop theme: in this case, black.
 
@@ -10,7 +10,7 @@ Colors inherit desktop theme: in this case, black.
 
 Requires Python 2.7, pyGTK, python-twitter
 
-Partial list of features:
+## Partial List of Features
 
 * Trending topics 
 * Multiple accounts 
@@ -24,4 +24,6 @@ Partial list of features:
 * Cached images 
 * Harvest names
 
-Brought to you by [The Nerd Show](https://thenerdshow.com)
+## Download
+
+Crowbar is [available on GitHub](https://github.com/themanyone/crowbar)
