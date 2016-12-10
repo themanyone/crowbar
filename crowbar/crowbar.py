@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 
 ### Crowbar: Social Networking App for Twitter
 ###
-### Copyright (C) 2010 Henry Kroll 3rd. www.thenerdshow.com
+### Copyright (C) 2010, 2017 Henry Kroll 3rd. www.thenerdshow.com
 ### 
 ### This program is free software: you can redistribute it and/or modify
 ### it under the terms of the GNU General Public License as published by
